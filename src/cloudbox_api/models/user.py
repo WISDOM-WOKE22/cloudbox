@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cloudbox_api.db.base import Base
 
@@ -34,3 +34,6 @@ class User(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    folders: Mapped[list["Folder"]] = relationship(back_populates="owner")
+    files: Mapped[list["File"]] = relationship(back_populates="owner")
