@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: cloudbox-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cloudbox
+    ports:
+      - "5432:5432"
+    volumes:
+      - cloudbox_pgdata:/var/lib/postgresql/data
+
+volumes:
+  cloudbox_pgdata:
