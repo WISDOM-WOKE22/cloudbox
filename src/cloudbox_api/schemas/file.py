@@ -19,6 +19,16 @@ class FileMove(BaseModel):
     folder_id: uuid.UUID | None = None
 
 
+class UploadUrlResponse(BaseModel):
+    upload_url: str
+    expires_in: int
+
+
+class DownloadUrlResponse(BaseModel):
+    download_url: str
+    expires_in: int
+
+
 class FileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

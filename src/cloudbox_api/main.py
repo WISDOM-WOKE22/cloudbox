@@ -9,6 +9,11 @@ from cloudbox_api.db.session import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        from cloudbox_api.core.storage import ensure_bucket_exists
+        ensure_bucket_exists()
+    except Exception:
+        pass  # MinIO may not be available in tests or early development
     yield
     await engine.dispose()
 
