@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_USER_TTL_SECONDS: int = 300
+    RATE_LIMIT_LOGIN_MAX: int = 10
+    RATE_LIMIT_LOGIN_WINDOW_SECONDS: int = 60
+
+    RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
+
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"

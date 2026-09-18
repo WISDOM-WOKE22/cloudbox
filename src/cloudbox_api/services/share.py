@@ -10,6 +10,7 @@ from cloudbox_api.models.folder import Folder
 from cloudbox_api.models.share import Permission, ResourceType, Share
 from cloudbox_api.models.user import User
 from cloudbox_api.schemas.share import ShareCreate, ShareUpdate
+from cloudbox_api.services.activity import publish_activity_event
 
 
 async def create_share(
@@ -19,7 +20,7 @@ async def create_share(
     resource_id: uuid.UUID,
     data: ShareCreate,
 ) -> Share:
-    await _verify_resource_ownership(db, owner.id, resource_type, resource_id)
+    resource = await _verify_resource_ownership(db, owner.id, resource_type, resource_id)
 
     if data.shared_with_id == owner.id:
         raise HTTPException(
@@ -55,6 +56,10 @@ async def create_share(
     db.add(share)
     await db.commit()
     await db.refresh(share)
+
+    action = f"{resource_type.value}.shared"
+    await publish_activity_event(action, owner.id, resource_type.value, resource_id, resource.name)
+
     return share
 
 
@@ -122,7 +127,7 @@ async def _verify_resource_ownership(
     owner_id: uuid.UUID,
     resource_type: ResourceType,
     resource_id: uuid.UUID,
-) -> None:
+) -> File | Folder:
     if resource_type == ResourceType.FILE:
         model = File
     else:
@@ -131,11 +136,13 @@ async def _verify_resource_ownership(
     result = await db.execute(
         select(model).where(model.id == resource_id, model.owner_id == owner_id)
     )
-    if result.scalar_one_or_none() is None:
+    resource = result.scalar_one_or_none()
+    if resource is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"{resource_type.value.capitalize()} not found",
         )
+    return resource
 
 
 async def _get_owned_share(

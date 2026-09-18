@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cloudbox_api.core.cache import invalidate_user_cache
 from cloudbox_api.core.exceptions import ConflictError
 from cloudbox_api.models.user import User
 from cloudbox_api.schemas.user import UserUpdate
@@ -27,5 +28,6 @@ async def update(db: AsyncSession, user: User, update_data: UserUpdate) -> User:
 
     await db.commit()
     await db.refresh(user)
+    await invalidate_user_cache(user.id)
 
     return user

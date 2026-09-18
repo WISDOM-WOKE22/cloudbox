@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cloudbox_api.core.rate_limit import check_login_rate_limit
 from cloudbox_api.dependencies.database import get_db
 from cloudbox_api.schemas.auth import MessageResponse, RefreshRequest, TokenResponse
 from cloudbox_api.schemas.user import UserCreate, UserResponse
@@ -18,8 +19,11 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) ->
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
+    await check_login_rate_limit(request)
     return await auth_service.login(db, form_data.username, form_data.password)
 
 

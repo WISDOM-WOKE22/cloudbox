@@ -9,6 +9,7 @@ from cloudbox_api.models.folder import Folder
 from cloudbox_api.models.share import ResourceType
 from cloudbox_api.models.user import User
 from cloudbox_api.schemas.folder import FolderCreate, FolderMove, FolderUpdate
+from cloudbox_api.services.activity import publish_activity_event
 from cloudbox_api.services.share import delete_shares_for_resource
 
 
@@ -26,6 +27,7 @@ async def create(db: AsyncSession, owner: User, data: FolderCreate) -> Folder:
     db.add(folder)
     await db.commit()
     await db.refresh(folder)
+    await publish_activity_event("folder.created", owner.id, "folder", folder.id, folder.name)
     return folder
 
 
@@ -52,9 +54,12 @@ async def update(
     if data.name != folder.name:
         await _check_name_conflict(db, owner.id, folder.parent_id, data.name)
         folder.name = data.name
-
-    await db.commit()
-    await db.refresh(folder)
+        await db.commit()
+        await db.refresh(folder)
+        await publish_activity_event("folder.renamed", owner.id, "folder", folder.id, folder.name)
+    else:
+        await db.commit()
+        await db.refresh(folder)
     return folder
 
 
@@ -100,15 +105,20 @@ async def move(
         folder.parent_id = data.parent_id
         await db.commit()
         await db.refresh(folder)
+        await publish_activity_event("folder.moved", owner.id, "folder", folder.id, folder.name)
 
     return folder
 
 
 async def delete(db: AsyncSession, owner_id: uuid.UUID, folder_id: uuid.UUID) -> None:
     folder = await _get_owned_folder(db, owner_id, folder_id)
+    folder_name = folder.name
+    folder_id_copy = folder.id
+
     await delete_shares_for_resource(db, ResourceType.FOLDER, folder.id)
     await db.delete(folder)
     await db.commit()
+    await publish_activity_event("folder.deleted", owner_id, "folder", folder_id_copy, folder_name)
 
 
 async def _get_owned_folder(

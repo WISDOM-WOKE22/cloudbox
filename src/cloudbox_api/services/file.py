@@ -17,6 +17,7 @@ from cloudbox_api.models.file import File
 from cloudbox_api.models.folder import Folder
 from cloudbox_api.models.share import ResourceType
 from cloudbox_api.models.user import User
+from cloudbox_api.services.activity import publish_activity_event
 from cloudbox_api.schemas.file import (
     DownloadUrlResponse,
     FileCreate,
@@ -41,6 +42,7 @@ async def create(db: AsyncSession, owner: User, data: FileCreate) -> File:
     db.add(file)
     await db.commit()
     await db.refresh(file)
+    await publish_activity_event("file.created", owner.id, "file", file.id, file.name)
     return file
 
 
@@ -66,9 +68,12 @@ async def update(
 
     if data.name != file.name:
         file.name = data.name
-
-    await db.commit()
-    await db.refresh(file)
+        await db.commit()
+        await db.refresh(file)
+        await publish_activity_event("file.renamed", owner_id, "file", file.id, file.name)
+    else:
+        await db.commit()
+        await db.refresh(file)
     return file
 
 
@@ -84,6 +89,7 @@ async def move(
         file.folder_id = data.folder_id
         await db.commit()
         await db.refresh(file)
+        await publish_activity_event("file.moved", owner.id, "file", file.id, file.name)
 
     return file
 
@@ -149,6 +155,8 @@ async def get_download_url(
 
 async def delete(db: AsyncSession, owner_id: uuid.UUID, file_id: uuid.UUID) -> None:
     file = await _get_owned_file(db, owner_id, file_id)
+    file_name = file.name
+    file_id_copy = file.id
 
     if file.storage_key is not None:
         delete_object(file.storage_key)
@@ -156,6 +164,7 @@ async def delete(db: AsyncSession, owner_id: uuid.UUID, file_id: uuid.UUID) -> N
     await delete_shares_for_resource(db, ResourceType.FILE, file.id)
     await db.delete(file)
     await db.commit()
+    await publish_activity_event("file.deleted", owner_id, "file", file_id_copy, file_name)
 
 
 async def _get_owned_file(
